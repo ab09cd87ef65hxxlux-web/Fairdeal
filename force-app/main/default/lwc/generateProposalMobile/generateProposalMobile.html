@@ -94,7 +94,7 @@
                                                     <template lwc:if={row.edited}>
                                                         <span class="badge edited">Edited</span>
                                                     </template>
-                                                    <template lwc:if={row.showUnitToggle !== false}>
+                                                    <template lwc:if={row.showUnitToggle}>
                                                         <button class="slds-button slds-button_icon-bare unit-toggle" title={row.unitToggleTitle} onclick={handleToggleUnit} data-key={row.key}>
                                                             <lightning-icon icon-name={row.unitToggleIcon} size="x-small" alternative-text={row.unitToggleTitle}></lightning-icon>
                                                         </button>
@@ -206,7 +206,7 @@
                             <span class="doc-divider">·</span>
                             <span class="doc-format">{selectedFormatLabel}</span>
                             <span class="doc-divider">·</span>
-                            <span class="doc-count">{selectedCount} {selectedCount === 1 ? 'property' : 'properties'}</span>
+                            <span class="doc-count">{selectedCount} {selectedCount == 1 ? 'property' : 'properties'}</span>
                             <span class="doc-divider">·</span>
                             <span class="doc-type">PDF</span>
                         </div>
