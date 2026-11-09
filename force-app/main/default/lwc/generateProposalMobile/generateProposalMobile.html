@@ -1,0 +1,282 @@
+<template>
+    <div class="shell">
+        <template lwc:if={showOwnHeader}>
+            <h1 class="title">Generate Proposal</h1>
+        </template>
+        <div class="screen">
+            <template lwc:if={showProgress}>
+                <ol class="steps" aria-label="Progress">
+                    <li class={stepOneClass} aria-current={stepOneCurrent}>
+                        <span class="step-mark">{stepOneMark}</span>Select &amp; Edit
+                    </li>
+                    <li class={stepTwoClass} aria-current={stepTwoCurrent}>
+                        <span class="step-mark">{stepTwoMark}</span>Format and send
+                    </li>
+                    <li class={stepThreeClass} aria-current={stepThreeCurrent}>
+                        <span class="step-mark">{stepThreeMark}</span>Generated
+                    </li>
+                </ol>
+            </template>
+
+            <div class="body">
+                <!-- Loading -->
+                <template lwc:if={isLoading}>
+                    <div class="state state_loading" role="status">
+                        <lightning-spinner alternative-text="Loading properties" size="medium"></lightning-spinner>
+                    </div>
+                </template>
+
+                <!-- Load error -->
+                <template lwc:if={loadError}>
+                    <div class="banner banner_error" role="alert">
+                        <lightning-icon icon-name="utility:error" size="x-small" alternative-text="Error" class="banner-icon"></lightning-icon>
+                        <div class="banner-text">
+                            <p class="banner-title">We couldn't load the properties.</p>
+                            <p>{loadError}</p>
+                        </div>
+                        <button class="slds-button slds-button_neutral action" onclick={handleRetryLoad}>Try again</button>
+                    </div>
+                </template>
+
+                <!-- Empty -->
+                <template lwc:if={hasNoRecords}>
+                    <div class="state state_empty">
+                        <lightning-icon icon-name="utility:building" size="large" alternative-text=""></lightning-icon>
+                        <p class="state-title">No properties to propose</p>
+                        <p class="state-text">Add properties to this record before generating a proposal. Properties that are already leased or sold are not shown.</p>
+                    </div>
+                </template>
+
+                <!-- STEP 1: select & edit -->
+                <template lwc:if={isSelectStep}>
+                    <!-- Blue banner -->
+                    <div class="banner banner_info" role="status">
+                        <lightning-icon icon-name="utility:info" size="x-small" alternative-text="Info" class="banner-icon"></lightning-icon>
+                        <div class="banner-text">
+                            <p class="banner-title">All unit numbers remain hidden until individually revealed.</p>
+                        </div>
+                    </div>
+
+                    <template lwc:if={showList}>
+                        <div class="toolbar">
+                            <lightning-input type="checkbox" label="Select all properties" checked={allSelected} onchange={handleSelectAll}></lightning-input>
+                            <div class="toolbar-meta">
+                                <template lwc:if={wantTo}>
+                                    <span class="chip">{wantToLabel}</span>
+                                </template>
+                                <span class="count" aria-live="polite">{selectionSummary}</span>
+                            </div>
+                        </div>
+
+                        <div class="table-wrap">
+                            <table class="table" aria-label="Properties">
+                                <thead class="head">
+                                    <tr>
+                                        <th class="cell cell_select" scope="col"><span class="assistive">Select</span></th>
+                                        <th class="cell cell_name" scope="col">Property name</th>
+                                        <template for:each={columns} for:item="col">
+                                            <th key={col.key} class={col.headerClass} scope="col">{col.label}</th>
+                                        </template>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template for:each={visibleRows} for:item="row">
+                                        <tr key={row.key} class={row.rowClass}>
+                                            <td class="cell cell_select">
+                                                <lightning-input type="checkbox" variant="label-hidden" label={row.ariaLabel} checked={row.isChecked} data-key={row.key} onchange={handleRowSelection}></lightning-input>
+                                            </td>
+                                            <th class="cell cell_name" scope="row">
+                                                <div class="name-wrap">
+                                                    <span class="card-title">{row.name}</span>
+                                                    <template lwc:if={row.unitShown}>
+                                                        <span class="unit-chip">· Unit {row.unitNumber}</span>
+                                                    </template>
+                                                    <template lwc:if={row.edited}>
+                                                        <span class="badge edited">Edited</span>
+                                                    </template>
+                                                    <template lwc:if={row.showUnitToggle !== false}>
+                                                        <button class="slds-button slds-button_icon-bare unit-toggle" title={row.unitToggleTitle} onclick={handleToggleUnit} data-key={row.key}>
+                                                            <lightning-icon icon-name={row.unitToggleIcon} size="x-small" alternative-text={row.unitToggleTitle}></lightning-icon>
+                                                        </button>
+                                                    </template>
+                                                </div>
+                                                <div class="sub-loc">
+                                                    <span class="sub">{row.values.subLocation}</span>
+                                                    <span class="divider">·</span>
+                                                    <span class="mode">{row.values.propertyType}</span>
+                                                </div>
+                                                <span class="furnishing-badge">{row.values.furnishing}</span>
+                                            </th>
+                                            <template for:each={row.cells} for:item="cell">
+                                                <td key={cell.key} class={cell.cellClass}>
+                                                    <span class="cell-label">{cell.label}</span>
+                                                    <span class={cellValueClass(cell)}>{cell.displayValue}</span>
+                                                </td>
+                                            </template>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <template lwc:if={showPagination}>
+                            <div class="pager">
+                                <button class="slds-button slds-button_neutral action" onclick={handlePreviousPage} disabled={isFirstPage}>Previous</button>
+                                <span class="pager-label">{pageLabel}</span>
+                                <button class="slds-button slds-button_neutral action" onclick={handleNextPage} disabled={isLastPage}>Next</button>
+                            </div>
+                        </template>
+                    </template>
+                </template>
+
+                <!-- STEP 2: format and send -->
+                <template lwc:if={isReviewStep}>
+                    <div class="panel">
+                        <h2 class="panel-title">Proposal options</h2>
+                        <p class="panel-sub">
+                            {reviewSummary}.
+                            <button class="link" onclick={handleBack}>Change selection</button>
+                        </p>
+
+                        <ul class="selected-list" aria-label="Selected properties">
+                            <template for:each={selectedRows} for:item="row">
+                                <li key={row.key} class="selected-item">
+                                    <span class="sel-name">{row.name}</span>
+                                    <span class="sel-price">{row.reviewPrice}</span>
+                                    <button class="slds-button slds-button_icon-bare eye-btn" title={row.eyeToggleTitle} onclick={handleToggleEye} data-key={row.key}>
+                                        <lightning-icon icon-name={row.eyeIcon} size="x-small" alternative-text={row.eyeToggleTitle}></lightning-icon>
+                                    </button>
+                                </li>
+                            </template>
+                        </ul>
+
+                        <lightning-combobox name="format" data-id="format" label="Document format" placeholder="Select a format" required value={selectedFormat} options={formatOptions} onchange={handleFormatChange} message-when-value-missing="Select a document format."></lightning-combobox>
+                        <template lwc:if={formatError}>
+                            <p class="field-error" role="alert">{formatError}</p>
+                        </template>
+
+                        <div class="terms">
+                            <lightning-input type="checkbox" label="Include Terms and Conditions" checked={includeTerms} onchange={handleTermsChange}></lightning-input>
+                        </div>
+
+                        <div class="recipient">
+                            <lightning-icon icon-name="utility:email" size="x-small" alternative-text=""></lightning-icon>
+                            <div>
+                                <p class="recipient-title">Save &amp; Send emails the proposal to</p>
+                                <div class="toggle-wrap">
+                                    <lightning-input type="toggle" label="Save &amp; Send by Email" checked={saveAndSend} onchange={handleSaveAndSendToggle}></lightning-input>
+                                </div>
+                                <template lwc:if={hasRecipientEmail}>
+                                    <p>{recipientLine}</p>
+                                </template>
+                                <template lwc:if={missingRecipientEmail}>
+                                    <p class="recipient-warn">{recipientName} has no email address. Save &amp; Send will save the proposal but won't email it.</p>
+                                </template>
+                                <template lwc:if={recipientUnknown}>
+                                    <p>the contact on this record, if they have an email address.</p>
+                                </template>
+                                <template lwc:if={saveAndSend && missingRecipientEmail}>
+                                    <p class="recipient-warn">Warning: the client must have a valid email address.</p>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    <template lwc:if={generateError}>
+                        <div class="banner banner_error" role="alert">
+                            <lightning-icon icon-name="utility:error" size="x-small" alternative-text="Error" class="banner-icon"></lightning-icon>
+                            <div class="banner-text">
+                                <p class="banner-title">The proposal wasn't generated.</p>
+                                <p>{generateError} Your selection and options are kept, so you can try again.</p>
+                            </div>
+                        </div>
+                    </template>
+                </template>
+
+                <!-- STEP 3: generated -->
+                <template lwc:if={isDoneStep}>
+                    <div class="state state_done" role="status">
+                        <lightning-icon icon-name="utility:success" size="large" alternative-text="Success" class="icon-success"></lightning-icon>
+                        <p class="state-title">Proposal generated</p>
+                        <p class="state-text">{successMessage}</p>
+                    </div>
+                    <div class="doc-card">
+                        <div class="doc-left">
+                            <span class="doc-label">Property Proposal</span>
+                            <span class="doc-divider">·</span>
+                            <span class="doc-format">{selectedFormatLabel}</span>
+                            <span class="doc-divider">·</span>
+                            <span class="doc-count">{selectedCount} {selectedCount === 1 ? 'property' : 'properties'}</span>
+                            <span class="doc-divider">·</span>
+                            <span class="doc-type">PDF</span>
+                        </div>
+                        <div class="doc-actions">
+                            <button class="slds-button slds-button_brand action share-btn" onclick={handleShareWhatsApp}>WhatsApp</button>
+                            <button class="slds-button slds-button_brand action share-btn" onclick={handleShareEmail}>Email</button>
+                            <button class="slds-button slds-button_outline-brand action share-btn" onclick={handleShareMore}>More Sharing Options</button>
+                        </div>
+                    </div>
+                </template>
+
+                <template lwc:if={isGenerating}>
+                    <div class="overlay" role="status">
+                        <lightning-spinner alternative-text="Generating proposal" size="medium"></lightning-spinner>
+                        <p class="overlay-text">Generating proposal...</p>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Footer actions -->
+            <div class="footer">
+                <template lwc:if={isSelectStep}>
+                    <p class="footer-hint" role="alert">{selectionError}</p>
+                    <div class="footer-actions">
+                        <button class="slds-button slds-button_neutral action" onclick={handleCancel}>Cancel</button>
+                        <button class="slds-button slds-button_brand action" onclick={handleContinue} disabled={cannotContinue}>Continue</button>
+                    </div>
+                </template>
+                <template lwc:if={isReviewStep}>
+                    <div class="footer-actions">
+                        <button class="slds-button slds-button_neutral action" onclick={handleBack} disabled={isGenerating}>Back</button>
+                        <button class="slds-button slds-button_outline-brand action" onclick={handleSave} disabled={isGenerating}>Save</button>
+                        <button class="slds-button slds-button_brand action" onclick={handleSaveAndSend} disabled={isGenerating}>Save &amp; Send</button>
+                    </div>
+                </template>
+                <template lwc:if={isDoneStep}>
+                    <div class="footer-actions">
+                        <button class="slds-button slds-button_brand action" onclick={handleClose}>Done</button>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Proposal Values modal -->
+    <template lwc:if={showEditModal}>
+        <section class="slds-modal slds-fade-in-open" role="dialog">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <h2 class="slds-text-heading_medium slds-hyphenate">Edit Proposal Values</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <p class="edit-note">Changes here will apply only to the generated proposal. They won't update the original inventory figures.</p>
+                    <template for:each={editableFields} for:item="f">
+                        <div key={f.key} class="edit-field">
+                            <label class="edit-label">{f.label}</label>
+                            <div class="edit-row">
+                                <span class="edit-original">Original: {f.original}</span>
+                                <lightning-input type="text" value={f.value} onchange={handleEditFieldChange} data-key={f.key} class="edit-input"></lightning-input>
+                            </div>
+                        </div>
+                    </template>
+                    <div class="edit-footer">
+                        <button class="slds-button slds-button_neutral" onclick={handleEditRestore}>Restore</button>
+                        <button class="slds-button slds-button_neutral" onclick={handleEditCancel}>Cancel Editing</button>
+                        <button class="slds-button slds-button_brand" onclick={handleEditApply}>Apply Changes</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+</template>

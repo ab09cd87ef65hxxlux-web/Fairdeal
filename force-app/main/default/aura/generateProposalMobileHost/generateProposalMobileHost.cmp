@@ -1,0 +1,16 @@
+<aura:component
+  implements="force:hasRecordId,force:lightningQuickAction"
+  access="global"
+>
+  <!--
+    Thin Aura shell so the Generate Proposal UI is available as a quick action
+    in the Salesforce mobile app, which does not support LWC-based quick actions.
+    All UI and logic live in c:generateProposalMobile; this shell only passes the
+    record Id and closes the action when the LWC asks it to.
+  -->
+  <c:generateProposalMobile
+    record-id="{!v.recordId}"
+    embedded="true"
+    oncloseaction="{!c.handleClose}"
+  ></c:generateProposalMobile>
+</aura:component>
