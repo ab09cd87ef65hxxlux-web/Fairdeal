@@ -309,13 +309,16 @@ export default class GenerateProposalMobile extends NavigationMixin(LightningEle
     return this.allRows.slice(start, start + PAGE_SIZE).map((row) => {
       const cells = columns.map((c) => {
         const value = this.getCellValue(row, c);
-        return {
-          key: c.key,
-          label: c.label,
-          value: value,
-          cellClass: cellClassFor(c),
-          edited: this.isCellEdited(row, c.key)
-        };
+      return {
+        key: c.key,
+        label: c.label,
+        value: this.getCellValue(row, c).displayValue,
+        cellClass: cellClassFor(c),
+        edited: this.isCellEdited(row, c.key),
+        classValue: this.isCellEdited(row, c.key)
+          ? "cell-value cell-value_edited"
+          : "cell-value"
+      };
       });
       return {
         ...row,
@@ -346,13 +349,6 @@ export default class GenerateProposalMobile extends NavigationMixin(LightningEle
   isCellEdited(row, key) {
     const edited = this.editedByKey.get(row.key);
     return !!(edited && edited[key] !== undefined);
-  }
-
-  cellValueClass(cell) {
-    return [
-      "cell-value",
-      cell.edited ? "cell-value_edited" : ""
-    ].filter(Boolean).join(" ");
   }
 
   get selectedRows() {

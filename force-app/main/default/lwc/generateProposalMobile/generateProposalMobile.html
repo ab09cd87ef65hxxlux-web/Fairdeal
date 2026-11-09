@@ -110,7 +110,7 @@
                                             <template for:each={row.cells} for:item="cell">
                                                 <td key={cell.key} class={cell.cellClass}>
                                                     <span class="cell-label">{cell.label}</span>
-                                                    <span class={cellValueClass(cell)}>{cell.displayValue}</span>
+                                                    <span class={cell.classValue}>{cell.displayValue}</span>
                                                 </td>
                                             </template>
                                         </tr>
